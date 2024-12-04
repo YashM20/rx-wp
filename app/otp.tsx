@@ -14,7 +14,7 @@ import {
   Alert,
 } from 'react-native';
 import MaskInput from 'react-native-mask-input';
-import { isClerkAPIResponseError, useSignIn, useSignUp } from '@clerk/clerk-expo';
+import { useAuth } from '@/context/AuthContext';
 
 const GER_PHONE = [
   `+`,
@@ -40,63 +40,28 @@ const Page = () => {
   const keyboardVerticalOffset = Platform.OS === 'ios' ? 90 : 0;
   const router = useRouter();
   const [loading, setLoading] = useState(false);
-  const { signUp, setActive } = useSignUp();
-  const { signIn } = useSignIn();
+  const { signIn } = useAuth();
 
   const openLink = () => {
     Linking.openURL('https://galaxies.dev');
   };
 
   const sendOTP = async () => {
-    console.log('sendOTP', phoneNumber);
+    if (!phoneNumber || phoneNumber.length < 10) {
+      Alert.alert('Error', 'Please enter a valid phone number');
+      return;
+    }
+
     setLoading(true);
-
     try {
-      await signUp!.create({
-        phoneNumber,
-      });
-      console.log('TESafter createT: ', signUp!.createdSessionId);
-
-      signUp!.preparePhoneNumberVerification();
-
-      console.log('after prepare: ');
+      // In a real app, you would send an OTP to the phone number here
+      // For now, we'll just simulate it and move to the verify screen
       router.push(`/verify/${phoneNumber}`);
     } catch (err) {
-      console.log('error', JSON.stringify(err, null, 2));
-
-      if (isClerkAPIResponseError(err)) {
-        if (err.errors[0].code === 'form_identifier_exists') {
-          // User signed up before
-          console.log('User signed up before');
-          await trySignIn();
-        } else {
-          setLoading(false);
-          Alert.alert('Error', err.errors[0].message);
-        }
-      }
+      Alert.alert('Error', 'Failed to send verification code');
+    } finally {
+      setLoading(false);
     }
-  };
-
-  const trySignIn = async () => {
-    console.log('trySignIn', phoneNumber);
-
-    const { supportedFirstFactors } = await signIn!.create({
-      identifier: phoneNumber,
-    });
-
-    const firstPhoneFactor: any = supportedFirstFactors.find((factor: any) => {
-      return factor.strategy === 'phone_code';
-    });
-
-    const { phoneNumberId } = firstPhoneFactor;
-
-    await signIn!.prepareFirstFactor({
-      strategy: 'phone_code',
-      phoneNumberId,
-    });
-
-    router.push(`/verify/${phoneNumber}?signin=true`);
-    setLoading(false);
   };
 
   return (

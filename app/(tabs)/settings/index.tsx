@@ -1,7 +1,7 @@
 import BoxedIcon from '@/components/BoxedIcon';
 import Colors from '@/constants/Colors';
 import { defaultStyles } from '@/constants/Styles';
-import { useAuth } from '@clerk/clerk-expo';
+import { useAuth } from '../../../context/AuthContext';
 import { Ionicons } from '@expo/vector-icons';
 import { View, ScrollView, Text, FlatList } from 'react-native';
 import { TouchableOpacity } from 'react-native-gesture-handler';

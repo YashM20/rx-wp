@@ -1,135 +1,82 @@
 import Colors from '@/constants/Colors';
-import { useSignUp, isClerkAPIResponseError, useSignIn } from '@clerk/clerk-expo';
-import { Stack, useLocalSearchParams } from 'expo-router';
-import { useEffect, useState } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Alert } from 'react-native';
+import { useAuth } from '@/context/AuthContext';
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useState } from 'react';
 import {
-  CodeField,
-  Cursor,
-  useBlurOnFulfill,
-  useClearByFocusCell,
-} from 'react-native-confirmation-code-field';
-const CELL_COUNT = 6;
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+  KeyboardAvoidingView,
+  Platform,
+  ActivityIndicator,
+  Alert,
+} from 'react-native';
+import MaskInput from 'react-native-mask-input';
 
 const Page = () => {
-  const { phone, signin } = useLocalSearchParams<{ phone: string; signin: string }>();
   const [code, setCode] = useState('');
-
-  const ref = useBlurOnFulfill({ value: code, cellCount: CELL_COUNT });
-  const [props, getCellOnLayoutHandler] = useClearByFocusCell({
-    value: code,
-    setValue: setCode,
-  });
-  const { signUp, setActive } = useSignUp();
-  const { signIn } = useSignIn();
-
-  useEffect(() => {
-    if (code.length === 6) {
-      console.log('verify', code);
-
-      if (signin === 'true') {
-        console.log('signin');
-        veryifySignIn();
-      } else {
-        verifyCode();
-      }
-    }
-  }, [code]);
+  const [loading, setLoading] = useState(false);
+  const keyboardVerticalOffset = Platform.OS === 'ios' ? 90 : 0;
+  const { phone } = useLocalSearchParams<{ phone: string }>();
+  const router = useRouter();
+  const { signIn } = useAuth();
 
   const verifyCode = async () => {
-    try {
-      await signUp!.attemptPhoneNumberVerification({
-        code,
-      });
-
-      await setActive!({ session: signUp!.createdSessionId });
-    } catch (err) {
-      console.log('error', JSON.stringify(err, null, 2));
-      if (isClerkAPIResponseError(err)) {
-        Alert.alert('Error', err.errors[0].message);
-      }
+    if (code.length !== 6) {
+      Alert.alert('Error', 'Please enter a valid code');
+      return;
     }
-  };
 
-  const veryifySignIn = async () => {
+    setLoading(true);
     try {
-      await signIn!.attemptFirstFactor({
-        strategy: 'phone_code',
-        code,
-      });
-
-      await setActive!({ session: signIn!.createdSessionId });
+      // In a real app, you would verify the code here
+      // For now, we'll just simulate successful verification
+      await signIn(phone);
+      router.replace('/(tabs)/chats');
     } catch (err) {
-      console.log('error', JSON.stringify(err, null, 2));
-      if (isClerkAPIResponseError(err)) {
-        Alert.alert('Error', err.errors[0].message);
-      }
-    }
-  };
-
-  const resendCode = async () => {
-    try {
-      if (signin === 'true') {
-        const { supportedFirstFactors } = await signIn!.create({
-          identifier: phone,
-        });
-
-        const firstPhoneFactor: any = supportedFirstFactors.find((factor: any) => {
-          return factor.strategy === 'phone_code';
-        });
-
-        const { phoneNumberId } = firstPhoneFactor;
-
-        await signIn!.prepareFirstFactor({
-          strategy: 'phone_code',
-          phoneNumberId,
-        });
-      } else {
-        await signUp!.create({
-          phoneNumber: phone,
-        });
-        signUp!.preparePhoneNumberVerification();
-      }
-    } catch (err) {
-      console.log('error', JSON.stringify(err, null, 2));
-      if (isClerkAPIResponseError(err)) {
-        Alert.alert('Error', err.errors[0].message);
-      }
+      Alert.alert('Error', 'Invalid verification code');
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
-    <View style={styles.container}>
-      <Stack.Screen options={{ title: phone }} />
-      <Text style={styles.legal}>We have sent you an SMS with a code to the number above.</Text>
-      <Text style={styles.legal}>
-        To complete your phone number verification, please enter the 6-digit activation code.
-      </Text>
+    <KeyboardAvoidingView
+      keyboardVerticalOffset={keyboardVerticalOffset}
+      style={{ flex: 1 }}
+      behavior="padding">
+      {loading && (
+        <View style={[StyleSheet.absoluteFill, styles.loading]}>
+          <ActivityIndicator size="large" color={Colors.primary} />
+          <Text style={{ fontSize: 18, padding: 10 }}>Verifying code...</Text>
+        </View>
+      )}
 
-      <CodeField
-        ref={ref}
-        {...props}
-        value={code}
-        onChangeText={setCode}
-        cellCount={CELL_COUNT}
-        rootStyle={styles.codeFieldRoot}
-        keyboardType="number-pad"
-        textContentType="oneTimeCode"
-        renderCell={({ index, symbol, isFocused }) => (
-          <View
-            // Make sure that you pass onLayout={getCellOnLayoutHandler(index)} prop to root component of "Cell"
-            onLayout={getCellOnLayoutHandler(index)}
-            key={index}
-            style={[styles.cellRoot, isFocused && styles.focusCell]}>
-            <Text style={styles.cellText}>{symbol || (isFocused ? <Cursor /> : null)}</Text>
-          </View>
-        )}
-      />
+      <View style={styles.container}>
+        <Text style={styles.description}>
+          Enter the 6-digit code sent to your phone number {phone}
+        </Text>
 
-      <TouchableOpacity style={styles.button} onPress={resendCode}>
-        <Text style={styles.buttonText}>Didn't receive a verification code?</Text>
-      </TouchableOpacity>
-    </View>
+        <MaskInput
+          value={code}
+          keyboardType="numeric"
+          autoFocus
+          placeholder="------"
+          onChangeText={(masked, unmasked) => {
+            setCode(masked);
+          }}
+          mask={[/\d/, /\d/, /\d/, /\d/, /\d/, /\d/]}
+          style={styles.input}
+        />
+
+        <TouchableOpacity
+          style={[styles.button, code.length === 6 ? styles.enabled : null]}
+          onPress={verifyCode}>
+          <Text style={[styles.buttonText, code.length === 6 ? styles.enabled : null]}>Verify</Text>
+        </TouchableOpacity>
+      </View>
+    </KeyboardAvoidingView>
   );
 };
 
@@ -141,43 +88,41 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.background,
     gap: 20,
   },
-  legal: {
+  description: {
     fontSize: 14,
+    color: Colors.gray,
     textAlign: 'center',
-    color: '#000',
   },
   button: {
     width: '100%',
     alignItems: 'center',
+    backgroundColor: Colors.lightGray,
+    padding: 10,
+    borderRadius: 10,
+  },
+  enabled: {
+    backgroundColor: Colors.primary,
+    color: '#fff',
   },
   buttonText: {
-    color: Colors.primary,
-    fontSize: 18,
+    color: Colors.gray,
+    fontSize: 22,
+    fontWeight: '500',
   },
-  codeFieldRoot: {
-    marginTop: 20,
-    width: 260,
-    marginLeft: 'auto',
-    marginRight: 'auto',
-    gap: 4,
+  input: {
+    backgroundColor: '#fff',
+    width: '100%',
+    fontSize: 36,
+    padding: 10,
+    textAlign: 'center',
+    letterSpacing: 20,
+    borderRadius: 10,
   },
-  cellRoot: {
-    width: 40,
-    height: 40,
+  loading: {
+    zIndex: 10,
+    backgroundColor: '#fff',
     justifyContent: 'center',
     alignItems: 'center',
-    borderBottomColor: '#ccc',
-    borderBottomWidth: 1,
-  },
-  cellText: {
-    color: '#000',
-    fontSize: 36,
-    textAlign: 'center',
-  },
-  focusCell: {
-    paddingBottom: 4,
-    borderBottomColor: '#000',
-    borderBottomWidth: 2,
   },
 });
 

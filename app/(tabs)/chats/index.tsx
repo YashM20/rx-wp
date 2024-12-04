@@ -7,7 +7,8 @@ const Page = () => {
   return (
     <ScrollView
       contentInsetAdjustmentBehavior="automatic"
-      contentContainerStyle={{ paddingBottom: 40, flex: 1, backgroundColor: '#fff' }}>
+      scrollEnabled={false}
+      contentContainerStyle={{ paddingTop: 60, flex: 1, backgroundColor: '#fff' }}>
       <FlatList
         data={chats}
         renderItem={({ item }) => <ChatRow {...item} />}
@@ -15,7 +16,7 @@ const Page = () => {
         ItemSeparatorComponent={() => (
           <View style={[defaultStyles.separator, { marginLeft: 90 }]} />
         )}
-        scrollEnabled={false}
+        scrollEnabled={true}
       />
     </ScrollView>
   );
