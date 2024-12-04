@@ -45,7 +45,7 @@ const TabsLayout = () => {
             headerShown: false,
           }}
         />
-        <Tabs.Screen
+        {/* <Tabs.Screen
           name="updates"
           options={{
             title: 'Updates',
@@ -53,9 +53,9 @@ const TabsLayout = () => {
               <MaterialIcons name="update" size={size} color={color} />
             ),
           }}
-        />
+        /> */}
        
-        <Tabs.Screen
+        {/* <Tabs.Screen
           name="communities"
           options={{
             title: 'Communities',
@@ -63,7 +63,7 @@ const TabsLayout = () => {
               <MaterialIcons name="people" size={size} color={color} />
             ),
           }}
-        />
+        /> */}
        
 
         <Tabs.Screen
